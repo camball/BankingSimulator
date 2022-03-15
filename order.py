@@ -1,4 +1,3 @@
-from math import prod
 import random
 import products
 from uuid import UUID, uuid4
@@ -22,9 +21,9 @@ class BaseOrder:
 
     def __str__(self) -> str:
         output = f"Order {self.orderID.hex}\n"
-        for idx, (product, quanity) in enumerate(self.productList.items()):
+        for idx, (product, quantity) in enumerate(self.productList.items()):
             output += (
-                f"{idx + 1}. {quanity} of {type(product).__name__} "
+                f"{idx + 1}. {quantity} of {type(product).__name__} "
                 f"@ {centsToDollars(product.price)} each\n"
             )
         output += f"TOTAL: {centsToDollars(self.totalPrice)}"
