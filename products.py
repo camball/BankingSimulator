@@ -1,11 +1,14 @@
+"""Defines a `Product` object, as well as wrapper functions for accessing a 
+database of products."""
 import sqlite3
 from uuid import uuid4
 
 
 def productExists(productName: str) -> bool:
+    """Check if product with name `productName` exists in the products database."""
     con = sqlite3.connect("products.db")
     cur = con.cursor()
-    cur.execute("SELECT name FROM products WHERE name = ?", productName)
+    cur.execute("SELECT name FROM products WHERE name = ?", (productName,))
     fetched_name = cur.fetchone()
     con.close()
     return True if fetched_name is not None else False
@@ -18,8 +21,11 @@ class ProductNotFoundError(sqlite3.ProgrammingError):
 
 
 class Product:
-    name: str
-    price: int  # represented in USD cents
+    """A product from the products database, retrieved and turned into an
+    object that can be used in code.
+
+    Has attributes `name` and `price`.
+    """
 
     def __init__(self, productName: str) -> None:
         """Initialise a `Product` object.
@@ -30,11 +36,11 @@ class Product:
         """
         con = sqlite3.connect("products.db")
         cur = con.cursor()
-        cur.execute("SELECT name, price FROM products WHERE name = ?", productName)
+        cur.execute("SELECT name, price FROM products WHERE name = ?", (productName,))
         fetched_name, fetched_price = cur.fetchone()
         con.close()
         self.name = fetched_name
-        self.price = fetched_price
+        self.price = fetched_price  # represented in USD cents
 
 
 def getProductByName(name: str) -> Product:

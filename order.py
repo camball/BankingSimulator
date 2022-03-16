@@ -4,8 +4,23 @@ import sqlite3
 from uuid import UUID, uuid4
 
 
-def centsToDollars(cents: int) -> str:
-    return f"${int(cents / 100)}.{cents % 100}"
+def formatCentsToDollars(cents: int) -> str:
+    """Takes in an arbitrary amount of cents; returns that amount of cents
+    as a string formatted as \"$<dollars>.<cents>\"."""
+    temp = str(cents)
+    negative = bool()
+    if cents < 0:
+        temp = temp[1:]  # remove negative sign
+        cents = abs(cents)
+        negative = True
+
+    if cents < 10:
+        temp = "$0.0" + temp
+    elif cents < 100:
+        temp = "$0." + temp
+    else:
+        temp = "$" + temp[:-2] + "." + temp[-2:]
+    return temp if not negative else f"-{temp}"
 
 
 class BaseOrder:
@@ -29,7 +44,7 @@ class BaseOrder:
                 p = products.getProductByName(productName)
                 output += (
                     f"{idx + 1}. {quantity} of {productName} "
-                    f"@ {centsToDollars(p.price)} each\n"
+                    f"@ {formatCentsToDollars(p.price)} each\n"
                 )
             except products.ProductNotFoundError:
                 print(
@@ -38,7 +53,7 @@ class BaseOrder:
                 order if it doesn't exist in the database..."""
                 )
 
-        output += f"TOTAL: {centsToDollars(self.totalPrice)}"
+        output += f"TOTAL: {formatCentsToDollars(self.totalPrice)}"
         return output
 
     @property
@@ -86,7 +101,9 @@ class BaseOrder:
         """Instead of adding or removing a product, this function allows
         setting the quantity of a product directly.
         """
-        if 0 < quantity <= self.MAX_QUANTITY:
+        if quantity == 0:
+            self.productList.pop(productName)
+        elif quantity <= self.MAX_QUANTITY:
             if self.productList.get(productName):
                 self.productList[productName] = quantity
 
@@ -125,11 +142,13 @@ class RandomOrder(BaseOrder):
 
         con = sqlite3.connect("products.db")
         cur = con.cursor()
-        products = [name for name in cur.execute("SELECT name FROM products")]
+        products: list[tuple] = [
+            name for name in cur.execute("SELECT name FROM products")
+        ]
         con.close()
 
         random.seed()
         self.productList = {
-            random.choice(products): random.randint(1, 5)
+            random.choice(products)[0]: random.randint(1, 5)
             for _ in range(numRandomProducts)
         }

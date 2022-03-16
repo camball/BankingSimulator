@@ -10,10 +10,9 @@ def main():
     3. Build a BankAccount class.
     4. Process the queue of orders - i.e., take the money out of the customer's bank account and add it to the company's account.
     """
-    # orders = [order.RandomOrder(3) for _ in range(3)]
+    productDict = {"Car": 3, "Tractor Trailer": 5}
 
-    # for o in orders:
-    #     print(o.totalPrice)
+    print(order.formatCentsToDollars(2937))
 
     # TODO: Fix order class to hash dictionary with *constant* product lookup codes instead of instances of the products. Adds and removes don't work right in that case.
 
