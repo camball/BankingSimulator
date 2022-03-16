@@ -100,9 +100,15 @@ class BaseOrder:
     def setQuantity(self, productName: str, quantity: int) -> None:
         """Instead of adding or removing a product, this function allows
         setting the quantity of a product directly.
+
+        If a product is not in the order, it will be added to the order.
+        If a product's quantity is set to zero, it will be removed from the
+        order.
         """
         if quantity == 0:
             self.productList.pop(productName)
+        elif productName not in self.productList.keys():
+            self.productList[productName] = quantity
         elif quantity <= self.MAX_QUANTITY:
             if self.productList.get(productName):
                 self.productList[productName] = quantity
