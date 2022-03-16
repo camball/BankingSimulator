@@ -1,5 +1,6 @@
 import random
 import products
+import sqlite3
 from uuid import UUID, uuid4
 
 
@@ -16,35 +17,55 @@ class BaseOrder:
         It should be noted that it is usually advised to
         instantiate an `Order` object instead of a `BaseOrder`.
         """
-        self.productList: dict[products.BaseProduct, int] = dict()
+        self.productList: dict[str, int] = dict()
         self.orderID: UUID = uuid4()
 
     def __str__(self) -> str:
         output = f"Order {self.orderID.hex}\n"
-        for idx, (product, quantity) in enumerate(self.productList.items()):
-            output += (
-                f"{idx + 1}. {quantity} of {type(product).__name__} "
-                f"@ {centsToDollars(product.price)} each\n"
-            )
+
+        # print entry for each product in order
+        for idx, (productName, quantity) in enumerate(self.productList.items()):
+            try:
+                p = products.getProductByName(productName)
+                output += (
+                    f"{idx + 1}. {quantity} of {productName} "
+                    f"@ {centsToDollars(p.price)} each\n"
+                )
+            except products.ProductNotFoundError:
+                print(
+                    """Something is very wrong with the order... 
+                this needs fixing. A product should not have been added to the 
+                order if it doesn't exist in the database..."""
+                )
+
         output += f"TOTAL: {centsToDollars(self.totalPrice)}"
         return output
 
     @property
     def totalPrice(self) -> int:
         """Total price of the order in USD cents."""
-        return sum(
-            [product.price * quantity for product, quantity in self.productList.items()]
-        )
+        prices = []
+        for productName, quantity in self.productList.items():
+            try:
+                p = products.getProductByName(productName)
+                prices.append(p.price * quantity)
+            except products.ProductNotFoundError:
+                print(
+                    """Something is very wrong with the order... 
+                this needs fixing. A product should not have been added to the 
+                order if it doesn't exist in the database..."""
+                )
+        return sum(prices)
 
-    def addProduct(self, product: products.BaseProduct) -> None:
+    def addProduct(self, productName: str) -> None:
         """Increment `product`'s quantity by one in the order, adding the
         product to the order if it is not already present."""
-        if (quantity := self.productList.get(product)) is None:
-            self.productList[product] = 1
+        if (quantity := self.productList.get(productName)) is None:
+            self.productList[productName] = 1
         elif quantity <= self.MAX_QUANTITY:
-            self.productList[product] += 1
+            self.productList[productName] += 1
 
-    def removeProduct(self, product: products.BaseProduct) -> None:
+    def removeProduct(self, productName: str) -> None:
         """Decrement `product`'s quantity by one from the order, removing
         `product` entirely if the quantity is only one.
 
@@ -54,20 +75,20 @@ class BaseOrder:
         functionality for removing a product that was never added to the
         order - that would only occur when this method is called incorrectly).
         """
-        if (val := self.productList.get(product)) == 1:
-            self.productList.pop(product)  # key is guaranteed to exist here
+        if (val := self.productList.get(productName)) == 1:
+            self.productList.pop(productName)  # key is guaranteed to exist here
         elif val is None:
             pass  # user of this function should never let program reach here
         else:
-            self.productList[product] -= 1
+            self.productList[productName] -= 1
 
-    def setQuantity(self, product: products.BaseProduct, quantity: int) -> None:
+    def setQuantity(self, productName: str, quantity: int) -> None:
         """Instead of adding or removing a product, this function allows
         setting the quantity of a product directly.
         """
         if 0 < quantity <= self.MAX_QUANTITY:
-            if self.productList.get(product):
-                self.productList[product] = quantity
+            if self.productList.get(productName):
+                self.productList[productName] = quantity
 
 
 class Order(BaseOrder):
@@ -76,7 +97,7 @@ class Order(BaseOrder):
     An `Order` contains a list of products.
     """
 
-    def __init__(self, products: dict[products.BaseProduct, int] | None = None) -> None:
+    def __init__(self, productDict: dict[str, int] | None = None) -> None:
         """Initialise an order.
         Passing a dictionary of products is optional, as products can be added
         to the order later as needed.
@@ -85,9 +106,11 @@ class Order(BaseOrder):
         to the order.
         """
         super().__init__()
-        if products:
+        if productDict:
             self.productList = {
-                product: quantity for product, quantity in products.items() if quantity
+                product: quantity
+                for product, quantity in productDict.items()
+                if quantity and products.productExists(product)
             }
 
 
@@ -100,10 +123,13 @@ class RandomOrder(BaseOrder):
         """Initialise an order, with `numRandomProducts` randomly generated products."""
         super().__init__()
 
+        con = sqlite3.connect("products.db")
+        cur = con.cursor()
+        products = [name for name in cur.execute("SELECT name FROM products")]
+        con.close()
+
         random.seed()
         self.productList = {
-            random.choice(
-                [products.Car, products.Truck, products.TractorTrailer]
-            )(): random.randint(1, 5)
+            random.choice(products): random.randint(1, 5)
             for _ in range(numRandomProducts)
         }

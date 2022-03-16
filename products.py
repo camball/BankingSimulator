@@ -1,18 +1,66 @@
-class BaseProduct:
+import sqlite3
+from uuid import uuid4
+
+
+def productExists(productName: str) -> bool:
+    con = sqlite3.connect("products.db")
+    cur = con.cursor()
+    cur.execute("SELECT name FROM products WHERE name = ?", productName)
+    fetched_name = cur.fetchone()
+    con.close()
+    return True if fetched_name is not None else False
+
+
+class ProductNotFoundError(sqlite3.ProgrammingError):
+    """A more semantic error for when an entry is not found in the product database."""
+
+    pass
+
+
+class Product:
+    name: str
     price: int  # represented in USD cents
 
-    @property
-    def name(self) -> str:
-        return self.__class__.__name__
+    def __init__(self, productName: str) -> None:
+        """Initialise a `Product` object.
+
+        Make sure to check if the `productName` being passed in exists in the
+        database first (by calling `products.productExists()`) before
+        initialising a `Product` instance.
+        """
+        con = sqlite3.connect("products.db")
+        cur = con.cursor()
+        cur.execute("SELECT name, price FROM products WHERE name = ?", productName)
+        fetched_name, fetched_price = cur.fetchone()
+        con.close()
+        self.name = fetched_name
+        self.price = fetched_price
 
 
-class Car(BaseProduct):
-    price = 918236
+def getProductByName(name: str) -> Product:
+    """Returns a Product instance with data about a given product, given the
+    name of said product.
+
+    Raises a `products.ProductNotFoundError` if the product cannot be found."""
+    if productExists(name):
+        return Product(name)
+    else:
+        raise ProductNotFoundError
 
 
-class Truck(BaseProduct):
-    price = 201980
+def initProductDatabase() -> None:
+    """Create the database. Only intended to be run once."""
+    con = sqlite3.connect("products.db")
+    cur = con.cursor()
+    cur.execute("CREATE TABLE products (uuid text, name text, price integer)")
+    con.commit()
+    con.close()
 
 
-class TractorTrailer(BaseProduct):
-    price = 937297
+def addProductToDatabase(name: str, price: int) -> None:
+    """Add a product to the database. `price` must be supplied in USD cents."""
+    con = sqlite3.connect("products.db")
+    cur = con.cursor()
+    cur.execute(f"INSERT INTO products VALUES ('{uuid4()}','{name}','{price}')")
+    con.commit()
+    con.close()

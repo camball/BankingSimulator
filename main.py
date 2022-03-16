@@ -17,12 +17,6 @@ def main():
 
     # TODO: Fix order class to hash dictionary with *constant* product lookup codes instead of instances of the products. Adds and removes don't work right in that case.
 
-    testOrder = order.Order()
-    testOrder.addProduct(products.TractorTrailer())
-    testOrder.addProduct(products.TractorTrailer())
-    testOrder.removeProduct(products.TractorTrailer())
-    print(testOrder)
-
 
 if __name__ == "__main__":
     main()
