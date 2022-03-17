@@ -140,12 +140,15 @@ class Order(BaseOrder):
     """
 
     def __init__(self, productDict: dict[str, int] | None = None) -> None:
-        """Initialise an order.
-        Passing a dictionary of products is optional, as products can be added
-        to the order later as needed.
+        """Initialise an order. Passing a dictionary of products is optional,
+        as products can be added to the order later as needed.
 
-        If any product in `products` has a quantity of zero, it is not added
-        to the order.
+        If any product in `products` has a quantity of zero, it is silently not
+        added to the order.
+
+        If any product not in the products database is passed via `productDict`,
+        it is silently not added to the order. All passed products should be
+        validated (i.e., via `products.productExists()`).
         """
         super().__init__()
         if productDict:
