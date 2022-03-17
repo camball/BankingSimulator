@@ -78,6 +78,6 @@ def addProductToDatabase(name: str, price: int) -> None:
     """Add a product to the database. `price` must be supplied in USD cents."""
     con = sqlite3.connect("products.db")
     cur = con.cursor()
-    cur.execute(f"INSERT INTO products VALUES ('{uuid4()}','{name}','{price}')")
+    cur.execute("INSERT INTO products VALUES ('?','?','?')", (uuid4().hex, name, price))
     con.commit()
     con.close()
