@@ -74,8 +74,14 @@ class BaseOrder:
 
     def addProduct(self, productName: str) -> None:
         """Increment `product`'s quantity by one in the order, adding the
-        product to the order if it is not already present."""
-        if (quantity := self.productList.get(productName)) is None:
+        product to the order if it is not already present.
+
+        If `productName` is not a valid product (i.e., not added to the
+        products database), then a `products.ProductNotFoundError is raised`.
+        """
+        if not products.productExists(productName):
+            raise products.ProductNotFoundError
+        elif (quantity := self.productList.get(productName)) is None:
             self.productList[productName] = 1
         elif quantity <= self.MAX_QUANTITY:
             self.productList[productName] += 1
