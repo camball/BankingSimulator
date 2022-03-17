@@ -3,10 +3,12 @@ database of products."""
 import sqlite3
 from uuid import uuid4
 
+PRODUCTS_DATABASE = "products.db"
+
 
 def productExists(productName: str) -> bool:
     """Check if product with name `productName` exists in the products database."""
-    con = sqlite3.connect("products.db")
+    con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()
     cur.execute("SELECT name FROM products WHERE name = ?", (productName,))
     fetched_name = cur.fetchone()
@@ -34,7 +36,7 @@ class Product:
         database first (by calling `products.productExists()`) before
         initialising a `Product` instance.
         """
-        con = sqlite3.connect("products.db")
+        con = sqlite3.connect(PRODUCTS_DATABASE)
         cur = con.cursor()
         cur.execute("SELECT name, price FROM products WHERE name = ?", (productName,))
         fetched_name, fetched_price = cur.fetchone()
@@ -62,7 +64,7 @@ def initProductDatabase() -> None:
     )
     while True:
         if response[0].lower() == "y":
-            con = sqlite3.connect("products.db")
+            con = sqlite3.connect(PRODUCTS_DATABASE)
             cur = con.cursor()
             cur.execute("CREATE TABLE products (uuid text, name text, price integer)")
             con.commit()
@@ -76,7 +78,7 @@ def initProductDatabase() -> None:
 
 def addProductToDatabase(name: str, price: int) -> None:
     """Add a product to the database. `price` must be supplied in USD cents."""
-    con = sqlite3.connect("products.db")
+    con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()
     cur.execute("INSERT INTO products VALUES ('?','?','?')", (uuid4().hex, name, price))
     con.commit()
