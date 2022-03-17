@@ -81,7 +81,8 @@ class BaseOrder:
         """
         if not products.productExists(productName):
             raise products.ProductNotFoundError
-        elif (quantity := self.productList.get(productName)) is None:
+
+        if (quantity := self.productList.get(productName)) is None:
             self.productList[productName] = 1
         elif quantity <= self.MAX_QUANTITY:
             self.productList[productName] += 1
@@ -95,7 +96,13 @@ class BaseOrder:
         exist in the order (it doesn't make sense to intentionally have
         functionality for removing a product that was never added to the
         order - that would only occur when this method is called incorrectly).
+
+        If `productName` is not a valid product (i.e., not added to the
+        products database), then a `products.ProductNotFoundError is raised`.
         """
+        if not products.productExists(productName):
+            raise products.ProductNotFoundError
+
         if (val := self.productList.get(productName)) == 1:
             self.productList.pop(productName)  # key is guaranteed to exist here
         elif val is None:
@@ -110,7 +117,13 @@ class BaseOrder:
         If a product is not in the order, it will be added to the order.
         If a product's quantity is set to zero, it will be removed from the
         order.
+
+        If `productName` is not a valid product (i.e., not added to the
+        products database), then a `products.ProductNotFoundError is raised`.
         """
+        if not products.productExists(productName):
+            raise products.ProductNotFoundError
+
         if quantity == 0:
             self.productList.pop(productName)
         elif productName not in self.productList.keys():
