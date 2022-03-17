@@ -56,11 +56,22 @@ def getProductByName(name: str) -> Product:
 
 def initProductDatabase() -> None:
     """Create the database. Only intended to be run once."""
-    con = sqlite3.connect("products.db")
-    cur = con.cursor()
-    cur.execute("CREATE TABLE products (uuid text, name text, price integer)")
-    con.commit()
-    con.close()
+    response = input(
+        """Are you sure you want to create a new table? This may 
+    overwrite an existing products.db if it already exists. [y/n]: """
+    )
+    while True:
+        if response[0].lower() == "y":
+            con = sqlite3.connect("products.db")
+            cur = con.cursor()
+            cur.execute("CREATE TABLE products (uuid text, name text, price integer)")
+            con.commit()
+            con.close()
+            break
+        elif response[0].lower() == "n":
+            break
+        else:
+            response = input("Please enter [y/n]: ")
 
 
 def addProductToDatabase(name: str, price: int) -> None:
