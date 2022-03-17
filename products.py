@@ -6,14 +6,14 @@ from uuid import uuid4
 PRODUCTS_DATABASE = "products.db"
 
 
-def productExists(productName: str) -> bool:
-    """Check if product with name `productName` exists in the products database."""
+def productExists(productUUID: str) -> bool:
+    """Check if product with uuid `productUUID` exists in the products database."""
     con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()
-    cur.execute("SELECT name FROM products WHERE name = ?", (productName,))
-    fetched_name = cur.fetchone()
+    cur.execute("SELECT uuid FROM products WHERE uuid = ?", (productUUID,))
+    fetched_uuid = cur.fetchone()
     con.close()
-    return True if fetched_name is not None else False
+    return True if fetched_uuid is not None else False
 
 
 class ProductNotFoundError(sqlite3.ProgrammingError):
@@ -29,29 +29,30 @@ class Product:
     Has attributes `name` and `price`.
     """
 
-    def __init__(self, productName: str) -> None:
+    def __init__(self, productUUID: str) -> None:
         """Initialise a `Product` object.
 
-        Make sure to check if the `productName` being passed in exists in the
+        Make sure to check if the `productUUID` being passed in exists in the
         database first (by calling `products.productExists()`) before
         initialising a `Product` instance.
         """
         con = sqlite3.connect(PRODUCTS_DATABASE)
         cur = con.cursor()
-        cur.execute("SELECT name, price FROM products WHERE name = ?", (productName,))
-        fetched_name, fetched_price = cur.fetchone()
+        cur.execute("SELECT * FROM products WHERE uuid = ?", (productUUID,))
+        fetched_uuid, fetched_name, fetched_price = cur.fetchone()
         con.close()
+        self.uuid = fetched_uuid
         self.name = fetched_name
         self.price = fetched_price  # represented in USD cents
 
 
-def getProductByName(name: str) -> Product:
+def getProductByUUID(uuid: str) -> Product:
     """Returns a Product instance with data about a given product, given the
-    name of said product.
+    hexadecimal UUID of said product.
 
     Raises a `products.ProductNotFoundError` if the product cannot be found."""
-    if productExists(name):
-        return Product(name)
+    if productExists(uuid):
+        return Product(uuid)
     else:
         raise ProductNotFoundError
 
@@ -59,8 +60,7 @@ def getProductByName(name: str) -> Product:
 def initProductDatabase() -> None:
     """Create the database. Only intended to be run once."""
     response = input(
-        """Are you sure you want to create a new table? This may 
-    overwrite an existing products.db if it already exists. [y/n]: """
+        f"""Are you sure you want to create a new table?\nThis may overwrite an existing {PRODUCTS_DATABASE} if it already exists. [y/n]: """
     )
     while True:
         if response[0].lower() == "y":
@@ -80,6 +80,6 @@ def addProductToDatabase(name: str, price: int) -> None:
     """Add a product to the database. `price` must be supplied in USD cents."""
     con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()
-    cur.execute("INSERT INTO products VALUES ('?','?','?')", (uuid4().hex, name, price))
+    cur.execute("INSERT INTO products VALUES (?, ?, ?)", (uuid4().hex, name, price))
     con.commit()
     con.close()
