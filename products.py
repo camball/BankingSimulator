@@ -83,3 +83,36 @@ def addProductToDatabase(name: str, price: int) -> None:
     cur.execute("INSERT INTO products VALUES (?, ?, ?)", (uuid4().hex, name, price))
     con.commit()
     con.close()
+
+
+def updateProductInDatabase(uuid: str, name: str | None, price: int | None):
+    """Update a product's information in the database. `price` must be supplied in USD cents."""
+    if name is None and price is None:
+        raise sqlite3.ProgrammingError(
+            "Nothing to update; both name and price are missing... was that intentional?"
+        )
+
+    if not productExists(uuid):
+        raise ProductNotFoundError
+
+    con = sqlite3.connect(PRODUCTS_DATABASE)
+    cur = con.cursor()
+
+    if name is None:
+        cur.execute(
+            "UPDATE products SET price = ? WHERE uuid = ?",
+            (price, uuid),
+        )
+    elif price is None:
+        cur.execute(
+            "UPDATE products SET name = ? WHERE uuid = ?",
+            (name, uuid),
+        )
+    else:
+        cur.execute(
+            "UPDATE products SET name = ?, price = ? WHERE uuid = ?",
+            (name, price, uuid),
+        )
+
+    con.commit()
+    con.close()
