@@ -58,7 +58,7 @@ def getProductByUUID(uuid: str) -> Product:
 
 
 def initProductDatabase() -> None:
-    """Create the database. Only intended to be run once."""
+    """Create the products database. Only intended to be run once."""
     response = input(
         f"""Are you sure you want to create a new table?\nThis may overwrite an existing {PRODUCTS_DATABASE} if it already exists. [y/n]: """
     )
@@ -77,16 +77,35 @@ def initProductDatabase() -> None:
 
 
 def addProductToDatabase(name: str, price: int) -> None:
-    """Add a product to the database. `price` must be supplied in USD cents."""
+    """Add a product to the database. `price` must be supplied in USD cents,
+    and should not be negative. If it is, a ValueError is raised.
+    """
     con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()
+
+    if price < 0:
+        con.close()
+        raise ValueError("`price` must not be negative.")
+
     cur.execute("INSERT INTO products VALUES (?, ?, ?)", (uuid4().hex, name, price))
     con.commit()
     con.close()
 
 
-def updateProductInDatabase(uuid: str, name: str | None, price: int | None):
-    """Update a product's information in the database. `price` must be supplied in USD cents."""
+def updateProductInDatabase(
+    uuid: str, name: str | None = None, price: int | None = None
+):
+    """Update a product's information in the database.
+
+    `price` must be supplied in USD cents, and should not be negative. If it is,
+    a ValueError is raised.
+
+    Both `name` and `price` are optional, but at least one must be passed. If
+    both `name` and `price` are `None`, a sqlite3.ProgrammingError is raised.
+
+    If the product with UUID `uuid` cannot be found in the products database, a
+    ProductNotFoundError is raised.
+    """
     if name is None and price is None:
         raise sqlite3.ProgrammingError(
             "Nothing to update; both name and price are missing... was that intentional?"
@@ -94,6 +113,9 @@ def updateProductInDatabase(uuid: str, name: str | None, price: int | None):
 
     if not productExists(uuid):
         raise ProductNotFoundError
+
+    if price is not None and price < 0:
+        raise ValueError("`price` must not be negative.")
 
     con = sqlite3.connect(PRODUCTS_DATABASE)
     cur = con.cursor()

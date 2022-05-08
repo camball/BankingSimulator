@@ -1,6 +1,8 @@
-import random
+import datetime
 import products
+import random
 import sqlite3
+from typing import Any
 from uuid import UUID, uuid4
 
 
@@ -23,7 +25,146 @@ def formatCentsToDollars(cents: int) -> str:
     return temp if not negative else f"-{temp}"
 
 
+#! Research whether it would be best to merge products.db and discounts.db into a single database,
+#! just with multiple tables. In the future, we will also want a orders database as well, so consider that.
+
+DISCOUNTS_DATABASE = "discounts.db"
+"""Database represented with columns 
+- discountCode: text
+- percentage: integer
+- dollarAmt: integer
+- freeShipping: boolean
+- expirationDateTime: datetime
+
+`discountCode` is the primary key, and therefore must be unique.
+
+Each discount code corresponds to a certain type of discount. Each discount can 
+represent only one of the following:
+- A specific percentage off the order total
+- A specific dollar amount subtracted from the order total
+- Free shipping
+Thus, for whichever type of discount is set, the other two must be marked `NULL`.
+
+Each discount code can also be set to expire after a certain date and time. For 
+a never-expiring discount code, set this value to `NULL`.
+"""
+
+# TODO: Figure out if we should use datetime or text type for storing expirationDate.
+#! datetime would be nice because then sqlite can use ORDER BY statements internally.
+#! As such, though, what format does the data go in as? How can I input it from the output of datetime.isoformat(),
+#! and output it to construct a datetime object (presumably using datetime.fromisoformat())?
+#! Also, are union types allowed; i.e., can datetime be NULL *or* datetime? Otherwise, we will need to designate
+#! a specific time, like 0,0,0,0,0 to mean "this code never expires"
+def initDiscountDatabase() -> None:
+    """Create the discounts database. Only intended to be run once."""
+    response = input(
+        f"""Are you sure you want to create a new table?\nThis may overwrite an existing {DISCOUNTS_DATABASE} if it already exists. [y/n]: """
+    )
+    while True:
+        if response[0].lower() == "y":
+            con = sqlite3.connect(DISCOUNTS_DATABASE)
+            cur = con.cursor()
+            cur.execute(
+                "CREATE TABLE discounts (discountCode text, percentage integer, dollarAmt integer, freeShipping boolean, expirationDateTime datetime)"
+            )
+            con.commit()
+            con.close()
+            break
+        elif response[0].lower() == "n":
+            break
+        else:
+            response = input("Please enter [y/n]: ")
+
+
+def _check_add_discount_args(
+    arg0: Any | None, arg1: Any | None, arg2: Any | None
+) -> bool:
+    """Returns `False` only when exactly one of the arguments is not `None`."""
+    if (
+        # if 0 arguments are set
+        (arg0 is None and arg1 is None and arg2 is None)
+        # if 2 arguments are set
+        or (arg0 is None and arg1 is not None and arg2 is not None)
+        or (arg0 is not None and arg1 is not None and arg2 is None)
+        or (arg0 is not None and arg1 is None and arg2 is not None)
+        # if 3 arguments are set
+        or (arg0 is not None and arg1 is not None and arg2 is not None)
+    ):
+        return True
+    else:
+        # if 1 argument is set
+        return False
+
+
+def addDiscountToDatabase(
+    discountCode: str,
+    percentage: int | None = None,
+    dollarAmt: int | None = None,
+    freeShipping: bool | None = None,
+    expirationDate: datetime.datetime | None = None,
+) -> None:
+    """Add a discount code to the database.
+
+    Each discount code needs some method of discounting, so exactly one of
+    `percentage`, `dollarAmt`, or `freeShipping` must not be `None`. If this
+    is violated, a sqlite3.ProgrammingError is raised.
+
+    - `percentage` must be `None` or an integer on the interval [1,100]. If it
+    isn't, a ValueError is raised.
+    - `dollarAmt` must be `None` or a positive integer. If it isn't, a
+    ValueError is raised.
+
+    If `expirationDate` is `None`, the discount code never expires unless the
+    database entry is modified in the future.
+    """
+
+    if _check_add_discount_args(percentage, dollarAmt, freeShipping):
+        raise sqlite3.ProgrammingError(
+            "Exactly one of `percentage`, `dollarAmt`, or `freeShipping` must not be `None`."
+        )
+
+    if percentage is not None and (percentage < 1 or percentage > 100):
+        raise ValueError("`percentage` must be on the interval [1,100].")
+
+    if dollarAmt is not None and dollarAmt < 1:
+        raise ValueError("`dollarAmt` must be a positive integer.")
+
+    if expirationDate is None:
+        _expirationDate = "NULL"
+    else:
+        _expirationDate = expirationDate.isoformat()
+
+    con = sqlite3.connect(DISCOUNTS_DATABASE)
+    cur = con.cursor()
+    cur.execute(
+        "INSERT INTO discounts VALUES (?, ?, ?, ?, ?)",
+        (discountCode, percentage, dollarAmt, freeShipping, _expirationDate),
+    )
+    con.commit()
+    con.close()
+
+
+# TODO: Implement me!
+def updateDiscountInDatabase(
+    discountCode: str,
+    percentage: int | None = None,
+    dollarAmt: int | None = None,
+    freeShipping: bool | None = None,
+    expirationDate: datetime.datetime | None = None,
+):
+    """
+    The way I think this should work is the following:
+    First, get the current information about the row via primary key `discountCode`.
+    Unpack that into local variables. Somehow use the _check_add_discount_args() function
+    defined above to check whether the caller is updating the row in a valid way. If everything
+    is good, call the SQL UPDATE execute statement.
+    """
+    raise NotImplementedError
+
+
 class BaseOrder:
+    """Base class for derived Order classes."""
+
     MAX_QUANTITY = 25
     """The maximum number of any individual product allowed in an order."""
 
