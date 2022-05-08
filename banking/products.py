@@ -3,7 +3,7 @@ database of products."""
 import sqlite3
 from uuid import uuid4
 
-PRODUCTS_DATABASE = "products.db"
+PRODUCTS_DATABASE = "banking/products.db"
 
 
 def productExists(productUUID: str) -> bool:
